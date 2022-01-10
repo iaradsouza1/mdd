@@ -19,7 +19,25 @@ This project is organized in the following directories:
  - `scripts/`: Holds all the scripts used in the analyses;
  - `results/`: Holds results from each step analysis.
 
- In each directory, there is detailed description of files. 
+The `data/` directory the following files: 
+    - `genome/`: auxiliary files for kallisto quantification.
+        - `Homo_sapiens.GRCh38.97.gtf.gz`: GTF file from human gencode/Ensembl version 97.
+        - `Homo_sapiens.GRCh38.cdna.all.fa.gz`: Human transcriptome gencode/Ensembl version 97
+    - `kallisto/`: output from kallisto quantification mode (`abundance.tsv`). Quantification files are separated by brain region.
+        - `aINS/`:
+        - `Cg25/`:
+        - `dlPFC/`:
+        - `OFC/`:
+        - `Nac/`:
+        - `Sub/`:
+    - `meta/`:  metadata for BioProject SRP115956. 
+        - `SraRunTable.txt` : study metadata
+
+        
+
+
+    
+
 
 
 
