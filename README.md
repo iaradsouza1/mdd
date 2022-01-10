@@ -34,7 +34,7 @@ This project is organized in the following directories:
 
 ## Description of scripts used 
 
-**Quantification**
+- **Quantification**
 
 - Script for download, processing and quantification by kallisto;  
 
@@ -67,13 +67,13 @@ This project is organized in the following directories:
         - `organize_dge_dte_after_filtering`: Filters the outlier genes and transcripts identified by `ppcseq` from DGE and DTE results.  
         - `summarise_results_dge_dte_dtu`: Removes outlier transcripts from DTU analysis and gathers results from three methods.  
 
-**Functional analyses**:  
+- **Functional analyses**:  
     - `network`: Network inference using stringDB. Visualization by `RedeR` and `ggraph`.  
     - `enrichment`: Enrichment analysis of transcriptionally altered genes using clusterProfiler.  
     - `gwas_intersections`: Get genes with genomic regions related to depression using `gwasrapidd`.  
     - `intersection_analysis`: intersection analysis by sex, brain region, and method used.   
 
-**Additional scripts**:  
+- **Additional scripts**:  
     - `plots` and `plot_dtu`: Description of figures produced to the paper.    
 
 
