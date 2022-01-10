@@ -8,8 +8,11 @@
 *.rds
 *.png
 *.svg
+*pfam.txt
+*cpat.tsv
+*netsurf.csv
+*signalp5
 .Ruserdata
-results/*
 renv/*
 slurm*
 run*
