@@ -38,28 +38,29 @@ This project is organized in the following directories:
 
 - Script for download, processing and quantification by kallisto;  
 
-**Exploratory analysis**:  
+- **Exploratory analysis**: 
     - Metadata:  
-        - `metadata`: Organize metadata for further steps.  
+        - `metadata`: Organizes metadata for further steps.  
     - Transcript and gene estimates:  
         - `tx_gene`: Uses `tximport` to summarise gene counts and prepare data for further steps.  
         - `tx_tx`: Uses `tximport` to prepare data to further steps.  
     - Outlier identification:    
-        - `robust_pca`: Robust PCA analysis of samples;   
-        - `remove_outliers_samples`: Remove the outliers samples chosen by Robust PCA analysis.   
+        - `robust_pca`: Performs robust PCA analysis of samples using `rrcov`;   
+        - `remove_outliers_samples`: Removes the outliers samples chosen by Robust PCA analysis.   
     - Covariates selection:  
-        - `impute_meta`: Impute data for missing values found in some metadata covariates.  
-        - `rank_variables`: Perform covariate analysis.  
+        - `impute_meta`: Imputes data for missing values found in some metadata covariates.  
+        - `rank_variables`: Performs covariate analysis.  
 
-**TAG**:  
+
+- **TAG**:  
     - Feature-wise outlier detection:  
-        - `outliers_edge_ppcseq_gene`: Identification of outlier genes by `ppcseq`. Outlier genes were removed from DGE analysis.  
-        - `outliers_edge_ppcseq_tx`:  Identification of outlier transcripts by `ppcseq`. Outlier transcripts were removed from DTE and DTU analyses.  
+        - `outliers_edge_ppcseq_gene`: Performs identification of outlier genes by `ppcseq`. Outlier genes were removed from DGE analysis.  
+        - `outliers_edge_ppcseq_tx`:  Performs identification of outlier transcripts by `ppcseq`. Outlier transcripts were removed from DTE and DTU analyses.  
     - Differential gene expression:  
         - `edger_diff_gene`:  Differential gene expression with `edgeR`.
     - Differential transcript expression:    
         - `edger_diff_tx`: Differential transcript expression with `edgeR`.  
-        - `diff_tx_correct`: Multiple hypothesis correction with `stageR`.  
+        - `diff_tx_correct`: Performs multiple hypothesis correction with `stageR`.  
     - Differential transcript usage:  
         - `ISA/`: scripts for differential transcript usage using `IsoformSwitchAnalyzeR` are stored in this directory.   
     - Gather results from three methods:  
