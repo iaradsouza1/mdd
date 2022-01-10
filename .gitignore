@@ -10,7 +10,9 @@
 *.png
 *.svg
 *pfam.txt
+*cpat.txt
 *cpat.tsv
+*.fasta
 *netsurf.csv
 *signalp5
 .Ruserdata
