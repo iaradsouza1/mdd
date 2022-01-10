@@ -5,6 +5,7 @@
 *.RData
 *.rda
 *.pdf
+*.gif
 *.rds
 *.png
 *.svg
