@@ -31,7 +31,54 @@ This project is organized in the following directories:
 
  - `scripts/`: Holds all the scripts used in the analyses;  
  - `results/`: Holds results from each step analysis.  
-  
+
+## Description of scripts used 
+Quantification
+
+- Script for download, processing and quantification by kallisto;  
+
+Exploratory analysis:  
+    - Metadata:  
+        - `metadata`: Organize metadata for further steps.  
+    - Transcript and gene estimates:  
+        - `tx_gene`: Uses `tximport` to summarise gene counts and prepare data for further steps.  
+        - `tx_tx`: Uses `tximport` to prepare data to further steps.  
+    - Outlier identification:    
+        - `robust_pca`: Robust PCA analysis of samples;   
+        - `remove_outliers_samples`: Remove the outliers samples chosen by Robust PCA analysis.   
+    - Covariates selection:  
+        - `impute_meta`: Impute data for missing values found in some metadata covariates.  
+        - `rank_variables`: Perform covariate analysis.  
+
+TAG:  
+    Feature-wise outlier detection:  
+        - `outliers_edge_ppcseq_gene`: Identification of outlier genes by `ppcseq`. Outlier genes were removed from DGE analysis.  
+        - `outliers_edge_ppcseq_tx`:  Identification of outlier transcripts by `ppcseq`. Outlier transcripts were removed from DTE and DTU analyses.  
+    Differential gene expression:  
+        - `edger_diff_gene`:  Differential gene expression with `edgeR`.
+    Differential transcript expression:    
+        - `edger_diff_tx`: Differential transcript expression with `edgeR`.  
+        - `diff_tx_correct`: Multiple hypothesis correction with `stageR`.  
+    Differential transcript usage:  
+        - `ISA/`: scripts for differential transcript usage using `IsoformSwitchAnalyzeR` are stored in this directory.   
+    Gather results from three methods:  
+        - `organize_dge_dte_after_filtering`: Filters the outlier genes and transcripts identified by `ppcseq` from DGE and DTE results.  
+        - `summarise_results_dge_dte_dtu`: Removes outlier transcripts from DTU analysis and gathers results from three methods.  
+
+Functional analyses:  
+    - `network`: Network inference using stringDB. Visualization by `RedeR` and `ggraph`.  
+    - `enrichment`: Enrichment analysis of transcriptionally altered genes using clusterProfiler.  
+    - `gwas_intersections`: Get genes with genomic regions related to depression using `gwasrapidd`.  
+    - `intersection_analysis`: intersection analysis by sex, brain region, and method used.   
+
+Additional:  
+    - `plots` and `plot_dtu`: Description of figures produced to the paper.    
+
+
+
+
+
+
 
 
     
