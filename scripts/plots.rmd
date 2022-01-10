@@ -1,0 +1,556 @@
+---
+title: "Paper figures"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, dev = c('pdf', 'png'), pdf.options(encoding = "ISOLatin9.enc"))
+```
+
+
+Load required packages:
+
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(patchwork)
+library(UpSetR)
+library(ggnewscale)
+library(pals)
+library(magrittr)
+library(ggh4x)
+library(AnnotationDbi)
+library(org.Hs.eg.db)
+library(xlsx)
+library(extrafont)
+library(VennDiagram)
+library(ggvenn)
+
+if(!dir.exists("results/tables")) {
+  dir.create("results/tables")
+}
+```
+
+
+Load results:
+
+```{r, warning=FALSE, message=FALSE}
+load("results/diff_exp/diff_df.rda")
+load("results/important_variables/ann.rda")
+load("results/intersects/intersects.rda")
+gwas_intersections <- read.csv("results/tables/gwas_intersection.csv")
+```
+
+# Figures in the main paper
+
+## Figure 1A
+
+```{r}
+# Color scale for gene type
+color_scale <- c("DGE" = "#0ac80aff", "DTE" = "#4f4affff", "DTU" = "#ff822fff")
+
+diff_df %>% 
+  dplyr::select(gene, type) %>% 
+  unique() %>% 
+  dplyr::count(type) %>% 
+  mutate(col = "col",
+         type = factor(type, levels = c("DTU", "DTE", "DGE"))) %>% 
+  ggplot(aes(x = col, y = n, fill = type)) +
+  geom_bar(position = "stack", stat = "identity") +
+  labs(x = "", y = "Number of transcriptionally altered genes", fill = "") +
+  scale_y_continuous(limits = c(0, 1500), breaks = seq(0, 1500, 200)) + 
+  scale_fill_manual(values = color_scale) + 
+  theme_classic() + 
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.line.x = element_blank()
+  )
+
+ggsave(file = "results/plots_paper/number_of_genes.pdf", height = 4, width = 2)
+ggsave(file = "results/plots_paper/number_of_genes.png", height = 4, width = 2)
+```
+
+
+Figure 1B was produced as described at the 'network.R' in 'scripts' directory.
+
+## Figure 2A
+
+```{r, warning=FALSE, message=FALSE}
+# Split columns
+diff_df %<>% 
+  separate(group, into = c("region", "sex"), sep = "_", remove = F)
+
+# Funcion to identify significant genes common to male and female groups
+count_int <- function(tbl) {
+  tbl %>% 
+    group_by_at(vars(gene, type, region2)) %>% 
+    dplyr::count(name = "int")
+} 
+
+# Filter only the common genes
+diff_df %>% 
+  mutate(region2 = region) %>% 
+  group_by(region) %>% 
+  group_map(~ count_int(.x)) %>% 
+  bind_rows() %>% 
+  dplyr::filter(int == 2) -> common_genes
+
+# Classify genes in I (intersection) and NI (not intersection)
+diff_df %>% 
+  left_join(common_genes, by = c("gene", "type", "region" = "region2")) %>% 
+  mutate(int = ifelse(is.na(int), "NI", "I"),
+         cols = paste(type, int, sep = "_")) %>% 
+  ungroup() -> df_intersection
+
+# Count the number of gene in Intersection categories
+# NI = Not intersection, I = intersection
+df_intersection %>% 
+  group_by(region, sex, type, int) %>% 
+  dplyr::count(name = "c") %>% 
+  ungroup() %>% 
+  spread(key = "int", value = "c") %>% 
+  mutate(I = ifelse(is.na(I), 0, I),
+         y = I + NI,
+         cols = paste(type, ifelse(I == 0, "NI", "I"), sep = "_"),
+         I = ifelse(I == 0, NA, I)) -> df_text
+
+# By regions plot
+# Compute the number of genes in NI and I.
+df_intersection %>% 
+  group_by(sex, region, int, type) %>% 
+  dplyr::count(name = "n") %>% 
+  group_by(sex, region, type) %>% 
+  mutate(n2 = sum(n),
+         n = case_when(
+           int == "I" ~ n,
+           int == "NI" ~ n2,
+          )
+         ) %>% 
+  ungroup() -> tmp  
+
+# Organize dataframes
+# NI - not in the intersection
+tmp %>% 
+  filter(int == "NI") %>% 
+  dplyr::select(region, x_axis = sex, type, n) %>% 
+  unique -> df1
+
+# I - in the intersection
+tmp %>% 
+  filter(int == "I") %>% 
+  dplyr::select(region, x_axis = int, type, n) %>% 
+  unique() -> df2
+
+# Create dataframe to plot
+df_plot <- bind_rows(df1, df2) %>% 
+  mutate(x_axis = factor(x_axis, levels = c("female", "male", "I"),
+                         labels = c("Female", "Male", "Intersection")))
+
+# Plot
+df_plot %>% 
+ggplot(aes(x = as.numeric(x_axis), y = n, fill = type)) +
+  geom_bar(stat = "identity", position = "stack") +
+  facet_grid(cols = vars(region)) + 
+  scale_y_continuous(name = "Number of transcriptionally altered genes", limits = c(0, 500), breaks = seq(0, 500, 50), minor_breaks = F) +
+  #facet_zoom(x = x_axis %in% c("Female", "Male", "Intersection")) +
+  scale_fill_manual(name = "", values = color_scale) +
+  scale_x_continuous("",
+    breaks = 1:length(levels(df_plot$x_axis)),
+    label = levels(df_plot$x_axis)) +
+  theme_bw() + 
+  theme(
+      panel.grid = element_blank(),
+      strip.background = element_rect(fill = "white"),
+      axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+ggsave("results/plots_paper/fig1A.pdf", height = 4, width = 7)
+ggsave("results/plots_paper/fig1A.png", height = 4, width = 7)
+```
+
+## Figure 2B
+
+```{r}
+# Create datafame to plot
+loadfonts()
+diff_df %>% 
+  mutate(sex = case_when(
+    sex == "female" ~ "Female",
+    sex == "male" ~ "Male"
+  )) -> tmp8
+
+# Create list of genes in female, in male, and in both sexes
+l_genes <- split(tmp8$gene, tmp8$sex)
+
+# Plot Venn diagram
+cairo_pdf(file = "results/plots_paper/fig2B.pdf", width = 4, height = 4)
+draw.pairwise.venn(area1 = n_distinct(l_genes$Female), 
+                   area2 = n_distinct(l_genes$Male), 
+                   cross.area = n_distinct(intersect(l_genes$Female, l_genes$Male)),
+                   rotation.degree = 270, 
+                   fill = c("#FA9B41", "#BEE346"))
+dev.off()
+```
+
+## Figure 2C
+
+```{r}
+# Create function to count intersections
+overlap_list <- function(gene_ls) {
+  genes <- unique(unlist(gene_ls))
+  res <- as.data.frame(sapply(gene_ls, function(x) { 
+    sapply(genes, function(y) {
+      as.integer(y %in% x)
+    })
+  }))
+  return(res)
+}
+
+# Organize df with intersections
+l_group_female <- lapply(split(diff_df$gene[diff_df$sex == "female"], 
+                               diff_df$group[diff_df$sex == "female"]), 
+                         unique)
+l_group_male <- lapply(split(diff_df$gene[diff_df$sex == "male"], 
+                             diff_df$group[diff_df$sex == "male"]), 
+                       unique)
+
+df_intersect_female <- overlap_list(l_group_female)
+df_intersect_male <- overlap_list(l_group_male)
+
+df_intersect_female %<>% 
+  mutate(exclusive = rowSums(across(where(is.numeric))))
+
+df_intersect_male %<>% 
+  mutate(exclusive = rowSums(across(where(is.numeric))))
+
+# Create temporary dataframes with the number of regions in each intersection
+# For females
+df_intersect_female %>% 
+  gather(region, value, 1:6) %>% 
+  filter(value == 1) %>% 
+  mutate(
+    exclusive = case_when(
+      exclusive == 1 ~ "Exclusive",
+      exclusive == 2 ~ "2",
+      exclusive == 3 ~ "3",
+      exclusive == 4 ~ "4",
+      exclusive == 5 ~ "5",
+    ),
+  ) %>% 
+  separate(region, into = c("region", "sex"), sep = "_") %>% 
+  dplyr::select(-value) %>% 
+  dplyr::count(sex, region, exclusive) -> tmp_1
+
+# For males
+df_intersect_male %>% 
+  gather(region, value, 1:6) %>% 
+  filter(value == 1) %>% 
+  mutate(
+    exclusive = case_when(
+      exclusive == 1 ~ "Exclusive",
+      exclusive == 2 ~ "2",
+      exclusive == 3 ~ "3",
+      exclusive == 4 ~ "4",
+      exclusive == 5 ~ "5",
+    ),
+  ) %>% 
+  separate(region, into = c("region", "sex"), sep = "_") %>% 
+  dplyr::select(-value) %>% 
+  dplyr::count(sex, region, exclusive) -> tmp_2
+
+# Combine the two dataframes
+df_plot2 <- bind_rows(tmp_1, tmp_2)
+df_plot2 %<>% 
+  mutate(exclusive = factor(exclusive, 
+                            levels = c("2", "3",
+                                       "4", "5",
+                                       "Exclusive")),
+         sex = factor(sex, 
+                      levels = c("female", "male"), labels = c("Female", "Male"))
+        ) %>% 
+  group_by(sex, region) %>% 
+  mutate(p = n / sum(n)) 
+
+# Compute the number of genes in male and female intersections.
+# 'tmp_5' and 'tmp_6'
+df_plot %>% # df_plot contains the number of TAG in each region for males and females
+  filter(x_axis == "Intersection") %>% 
+  group_by(region) %>% 
+  summarise(n_intersection = sum(n)) -> tmp_5
+
+df_plot2 %>% 
+  group_by(sex, region) %>% 
+  summarise(n_total = sum(n)) -> tmp_6
+
+# df_plot3 holds the number of genes in the intersection of females and males in each region
+df_plot3 <- inner_join(tmp_6, tmp_5, by = "region")
+df_plot3 %<>% 
+  mutate(p_intersect = n_intersection/n_total)
+
+# Join exclusivity information and intersection information
+df_plot2 <- inner_join(df_plot2, df_plot3, by = c("region", "sex"))
+
+# Dataframe to plt the red line which represents the intersection percentage in each region for each sex
+tmp7 <- data.frame(sex = c("Female", "Male"),
+                   xmin = c(0.65,1.65),
+                   xmax = c(1.35,2.35))
+
+df_plot2 <- inner_join(df_plot2, tmp7, by = "sex")
+
+# Define colors to each intersection
+cols_intersects <- c(
+  "2" = "grey80", 
+  "3" = "grey60", 
+  "4" = "grey40", 
+  "5" = "black",
+  "Exclusive" = "#8a0cb1ff"
+)
+
+# Plot with total number of genes in each intersection
+ggplot(df_plot2, aes(x = sex, y = n, fill = exclusive)) +
+  geom_bar(stat = "identity") + 
+  facet_grid(.~ region) + 
+  scale_fill_manual("Number of intersections among regions", values = cols_intersects) +
+  labs(x = "", y = "Number of significant genes") + 
+  scale_y_continuous(limits = c(0,450), breaks = seq(0, 450, 50)) +
+  geom_linerange(aes(xmin = xmin, xmax = xmax, y = n_intersection), lty = 3) + 
+  theme_bw() +
+  theme(
+    strip.background = element_rect(fill = "white"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom", 
+    legend.box = "horizontal"
+  ) +
+  guides(fill = guide_legend(title.position = "top", title.hjust = 0.5))
+
+ggsave("results/plots_paper/fig2C_1.pdf", height = 4, width = 5)
+ggsave("results/plots_paper/fig2C_1.png", height = 4, width = 5, dpi = 300)
+
+# Plot the percentage in each intersection
+ggplot(df_plot2, aes(x = sex, y = p, fill = exclusive)) +
+  geom_bar(stat = "identity", width = 0.8) + 
+  facet_grid(.~region) + 
+  scale_fill_manual("Number of intersections between regions", values = cols_intersects) +
+  scale_x_discrete(labels = c("Female" = expression("\u2640"), "Male" = expression("\u2642")))+
+  scale_y_continuous(breaks = seq(0,1,0.2), labels = scales::percent(seq(0,1,0.2))) +
+  geom_linerange(aes(xmin = xmin, xmax = xmax, y = p_intersect), lty = 1, lwd = 0.8, col = "red") + 
+  labs(x = "", y = "% of transcriptionally altered genes") + 
+  force_panelsizes(cols = grid::unit(1.2, "cm"))+
+  theme_bw() +
+  theme(
+    strip.background = element_rect(fill = "white"),
+    axis.text.x = element_text(size = 15, colour = "black"),
+    axis.ticks.x = element_blank(),
+    legend.position = "bottom", 
+    panel.grid = element_blank(),
+    legend.box = "horizontal"
+  ) +
+  guides(fill = guide_legend(title.position = "top", title.hjust = 0.5))
+
+ggsave("results/plots_paper/fig2C_2.pdf", height = 4, width = 5, device = cairo_pdf, dpi = 300)
+ggsave("results/plots_paper/fig2C_2.png", height = 4, width = 5, dpi = 300)
+
+```
+
+## Figure 3
+
+Enrichment plot was built as described in `enrichment.R` in `script` directory. 
+
+## Figure 4 and 5
+
+Figures 4 and 5 were built as described in `plot_dtu.R` in `script` directory.
+
+# Supplementary Figures
+
+## Supplementary Figure 1
+
+Supplementary Figure 1 was plotted as described in `robust_pca.R` in `scripts` directory. 
+
+## Supplementary Figure 2
+
+Supplementary Figure 2 was plotted as described in `rank_variables.R` in `scripts` directory. 
+
+## Supplementary Figures 3 and 5
+
+Supplementary Figure 3 and 5 were plotted as described in `intersection_analysis.R` in `scripts` directory. 
+
+##  Supplementary Figure 4
+
+```{r}
+# Plot transcriptionally altered genes (TAG) at gene- (DGE) and transcript-level (DTE and DTU)
+diff_df %>% 
+  group_by(sex, region) %>% 
+  group_map( ~ {
+    gl <- setdiff(unique(.x$gene[.x$type == "DGE"]), 
+                  unique(.x$gene[.x$type %in% c("DTE", "DTU")]))
+    .x$gt <- ifelse(.x$gene %in% gl, "G", "T")
+    .x
+  }, .keep = T) %>% 
+  bind_rows() %>% 
+  group_by(gt, region, sex) %>% 
+  dplyr::count(name = "n") %>% 
+  group_by(region, sex) %>% 
+  mutate(p_gt = n/sum(n)) %>% 
+  ggplot(aes(x = sex, y = p_gt, fill = gt)) +
+    geom_bar(stat = "identity") + 
+    facet_grid(.~ region) +
+    scale_y_continuous(breaks = seq(0,1,0.2), 
+                       labels = scales::percent(seq(0,1,0.2))) +
+    scale_x_discrete(labels = c("female" = expression("\u2640"), 
+                                "male" = expression("\u2642"))) +
+    scale_fill_manual(values = c("G" = "#5E835Fff", "T" = "#85587C"),
+                      labels = c("G" = "Genes", "T" = "Transcripts")) + 
+    labs(x = "", y = "Pergentage of transcriptionally altered genes", fill = "") + 
+    theme_bw() + 
+    theme(
+      strip.background = element_rect(fill = "white"),
+      axis.text.x = element_text(size = 15, colour = "black"),
+      axis.ticks.x = element_blank(),
+      panel.grid = element_blank()
+    )
+
+ggsave("results/plots_paper/percentage_gt.pdf", height = 5, width = 10, device = cairo_pdf)
+ggsave("results/plots_paper/percentage_gt.png", height = 5, width = 10)
+```
+
+# Supplementary Figure 6
+
+Intersection among the different methods used (DGE, DTE and DTU).
+```{r}
+
+# Load intersection information saved in 'intersection_analysis.R'
+load("results/intersects/intersects.rda")
+
+# Create dictionary
+dc <- diff_df %>% dplyr::select(genes = gene, hgnc_symbol) %>% unique()
+
+# Create gene SYMBOL column
+lapply(c(
+  "genes_by_group_female", "genes_by_group_male",
+  "genes_by_regions", "genes_by_sex", "genes_by_type"
+), function(x) {
+  assign(x, base::unique(inner_join(get(x, envir = .GlobalEnv), dc, by = "genes")), 
+         envir = .GlobalEnv)
+})
+
+# Create dataframe with gwas infos
+df <- data.frame(hgnc_symbol = unique(gwas_intersections$gene_name), gwas = "gwas")
+
+# Join gwas info with intersections info
+tmp <- inner_join(genes_by_sex, diff_df, by = c("hgnc_symbol"))
+tmp <- inner_join(tmp, genes_by_type, by = "hgnc_symbol")
+tmp <- left_join(tmp, df, by  = "hgnc_symbol")
+tmp$gwas <- ifelse(is.na(tmp$gwas), "not_gwas", tmp$gwas)
+
+# Plot for sex intersections by type
+tmp %>% 
+  dplyr::select(hgnc_symbol, intersect.x, intersect.y) %>% 
+  unique() %>% 
+  group_by(intersect.x, intersect.y) %>% 
+  dplyr::count(name = "n") %>% 
+  ggplot(aes(x = intersect.x, y = n, fill = intersect.y)) + 
+    geom_bar(stat = "identity") +
+    scale_fill_brewer(type = "qual", palette = "Set1") +
+    labs(x = "Intersections by sex", y = "Number of transcriptionally altered genes",
+         fill = "Intersections by type") + 
+  theme_bw()
+ggsave("results/plots_paper/intersect_sex_by_type2.pdf", width = 5, height = 4)
+ggsave("results/plots_paper/intersect_sex_by_type2.png", width = 5, height = 4)
+
+
+# Plot for sex intersections by gwas
+tmp %>% 
+  dplyr::select(hgnc_symbol, intersect.x, gwas) %>% 
+  unique() %>% 
+  group_by(intersect.x, gwas) %>% 
+  dplyr::count(name = "n") %>% 
+  ggplot(aes(x = intersect.x, y = n, fill = gwas)) + 
+  geom_bar(stat = "identity") +
+  scale_fill_brewer(type = "qual", palette = "Set1") +
+  labs(x = "Intersections by sex", y = "Number of transcriptionally altered genes",
+       fill = "GWAS") + 
+  theme_bw()
+
+ggsave("results/plots_paper/intersect_sex_by_gwas.pdf", width = 5, height = 4)
+ggsave("results/plots_paper/intersect_sex_by_gwas.png", width = 5, height = 4)
+```
+
+
+# Supplementary Tables
+
+## Supplementary Table 1
+
+```{r}
+load("results/important_variables/ann.rda")
+
+ann %>% 
+  dplyr::select(run, phenotype, gender, region) %>% 
+  count(phenotype, gender, region, name = "number_of_samples") %>% 
+  arrange(gender, region) %>% 
+  write.xlsx(file = "results/tables/number_of_samples.xlsx", row.names = F)
+```
+
+## Supplementary Table 2
+
+```{r}
+diff_df %>% 
+  write.xlsx(file = "results/tables/TAG.xlsx", row.names = F)
+```
+
+## Supplementary Table 3
+
+```{r}
+genes_by_group_female %>% 
+  write.xlsx(file = "results/tables/intersection_tables.xlsx", row.names = F, sheetName = "Female_Intersections")
+
+genes_by_group_male %>% 
+  write.xlsx(file = "results/tables/intersection_tables.xlsx", row.names = F, sheetName = "Male_Intersections",
+             append = T)
+
+genes_by_sex %>% 
+  write.xlsx(file = "results/tables/intersection_tables.xlsx", row.names = F, sheetName = "Sex_Intersections",
+             append = T)
+
+genes_by_regions %>% 
+  write.xlsx(file = "results/tables/intersection_tables.xlsx", row.names = F, sheetName = "Regions_Intersections",
+             append = T)
+
+```
+
+
+Save intersection tables for further consulting.
+```{r}
+# Save tables
+gene_name <- AnnotationDbi::select(org.Hs.eg.db, 
+                                   keys = diff_df$gene,
+                                   keytype = "ENSEMBL",
+                                   columns = c("ENSEMBL", "GENENAME", "SYMBOL"))
+
+tmp %>% 
+  # left_join(gene_name, by = c("genes" = "ENSEMBL")) %>% 
+  unique() %>% 
+  write_csv("results/tables/intersect_by_type_and_gwas.csv", quote_escape = "none") %>% 
+  write.xlsx(file = "results/tables/intersect_by_type_and_gwas.xlsx", row.names = F, showNA = F)
+
+overlap_list(l_group_female) %>% 
+  tibble::rownames_to_column("gene") %>% 
+  left_join(gene_name, by = c("gene" = "ENSEMBL")) %>% 
+  mutate(exclusive = rowSums(across(where(is.numeric)))) %>% 
+  arrange(desc(exclusive)) %>% 
+  unique() %>% 
+  write_csv("results/tables/intersect_regions_by_sex_female.csv", quote_escape = "none") %>% 
+  write.xlsx(file = "results/tables/intersect_regions_by_sex_female.xlsx", row.names = F, showNA = F)
+
+overlap_list(l_group_male) %>% 
+  tibble::rownames_to_column("gene") %>% 
+  left_join(gene_name, by = c("gene" = "ENSEMBL")) %>% 
+  mutate(exclusive = rowSums(across(where(is.numeric)))) %>% 
+  arrange(desc(exclusive)) %>% 
+  unique() %>% 
+  write_csv("results/tables/intersect_regions_by_sex_male.csv", quote_escape = "none") %>% 
+  write.xlsx(file = "results/tables/intersect_regions_by_sex_male.xlsx", row.names = F, showNA = F)
+
+```
+
+
+

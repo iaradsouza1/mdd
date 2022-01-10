@@ -1,0 +1,16 @@
+.Rproj.user
+.Rprofile
+.Rhistory
+.RDataTmp
+*.RData
+*.rda
+*.pdf
+*.rds
+*.png
+*.svg
+.Ruserdata
+results/*
+renv/*
+slurm*
+run*
+data/*
