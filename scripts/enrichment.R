@@ -2,9 +2,13 @@
 
 library(tidyverse)
 library(clusterProfiler)
-library(enrichplot)
-library(cowplot)
-library(patchwork)
+library(TreeAndLeaf)
+library(RedeR)
+library(igraph)
+library(GOSemSim)
+library(tidygraph)
+library(ggraph)
+library(ggpubr)
 
 # CREATE FUNCTIONS
 
@@ -85,8 +89,10 @@ save_df <- function(enrichment, file){
 
 # ENRICHMENT OF DIFFERENTIAL GENES ---------------------------------------
 load("results/diff_exp/diff_df.rda")
+# 
+# split_genes <- diff_df %>%group_split(group)
 
-split_genes <- diff_df %>% group_split(group, .keep = T)
+split_genes <- split(diff_df, diff_df$group)
 
 converted <- lapply(split_genes, convert_id, col = "gene")
 
@@ -96,10 +102,11 @@ enriched_ann <- create_plots(enrichment = enriched, directory = 'results/tx_enri
 
 enriched_df_diff <- transform_to_df(enriched_ann)
 
+names(enriched_df_diff) <- names(split_genes)
+
 save_df(enriched_df_diff, file = 'results/tx_enrich/go_terms.csv')
 
 save(enriched_df_diff, file = "results/tx_enrich/go_terms_tx_by_group.rda")
-
 
 # ## INTERSECTION ---------------------------------------------------------------
 # load("results/intersects/intersects.rda")
@@ -121,46 +128,96 @@ save(enriched_df_diff, file = "results/tx_enrich/go_terms_tx_by_group.rda")
 # 
 # save(enriched_df_by_sex, file = "results/tx_enrich/intersection_by_sex/go_terms_by_sex.rda")
 
-# PLOTS -------------------------------------------------------------------
 
-map(enriched_df_diff, ~ {
-  if(nrow(.x) > 0) {
-    .x %>% 
-      mutate(gr = Count/as.numeric(sapply(strsplit(GeneRatio, "/"), "[", 2))) %>% 
-      separate(group, into = c("region", "sex"), sep = "_") %>% 
-      mutate(sex = str_to_title(sex)) -> df
-    
-    ggplot(df, aes(y = Description, x = factor(1), size = Count, color = gr)) +
-      geom_point() + 
-      scale_color_viridis_c(limits = c(0, 0.4)) +
-      scale_size_continuous(limits = c(3, 30), breaks = seq(3, 30, 5)) +
-      labs(x = "", y = "", color = "Gene ratio") + 
-      theme_bw() + 
-      labs(title = paste(unique(df$region), unique(df$sex), sep = " ")) + 
-      theme(
-        axis.text.x = element_blank(),
-        axis.text.y = element_text(size = 8),
-        panel.grid = element_blank(),
-        panel.border = element_blank(),
-        axis.line = element_blank(),
-        axis.ticks = element_blank(),
-        strip.background = element_rect(fill = "white", color = NA),
-        legend.position = "right",
-        strip.text = element_text(size = 12),
-        panel.spacing.y = unit(2, "lines")
-      )
+# PLOT TREE AND LEAF ------------------------------------------------------
+
+# Organize data
+
+cutoff <- 0
+sizeIntervals <- 5 # usar 3 para o idx 8 e 5 para o 9
+
+
+organize_data <- function(enriched_df_diff, contrast) {
+  
+  data <- enriched_df_diff[[contrast]]
+  terms <- data$ID
+  
+  semData <- godata(ont = "BP")
+  data$path_lenght <- as.integer(sapply(strsplit(data$GeneRatio, "/"), "[", 2))
+  data$ratio <- data$Count/data$path_lenght
+  mSim <- mgoSim(terms, terms, semData = semData, measure = "Wang", combine = NULL)
+  
+  if(cutoff > 0){
+    RS <- rowSums(mSim) - 1
+    GOs <- names(sort(RS)[-1:-cutoff])
+    mSim <- mSim[rownames(mSim) %in% GOs, colnames(mSim) %in% GOs]
+    terms <- terms[terms %in% GOs]
+    data <- data[data$ID %in% GOs,]
   }
-}) -> ls # # List of plots
+  
+  return(list(msim = mSim, data = data))
+  
+}
 
-# Order plots by the number of terms
-ls <- ls[sapply(ls, function(x) !is.null(x))]
-or <- map(enriched_df_diff, ~ if(nrow(.x) > 0) nrow(.x))
-or <- order(unlist(or[sapply(or, function(x) !is.null(x))]), decreasing = T)
-ls <- ls[or]
+# Nac male ----------------------------------------------------------------
 
-# Plot grid
-combined <- wrap_plots(ls) & theme(legend.position = "right")
-combined + plot_layout(guides = "collect", heights = c(1, 0.3))
+nac_male <- organize_data(enriched_df_diff, "Nac_male")
 
-# Save
-ggsave("results/tx_enrich/enrichment_diff_regions.pdf", height = 18 , width = 12)
+# Create tree and leaf object
+hc <- hclust(dist(nac_male$msim), "average")
+tal_nac <- treeAndLeaf(hc)
+class(tal_nac) <- "igraph"
+
+# Modify graph
+gg <- as_tbl_graph(tal_nac, directed = F) %>% 
+  activate(nodes) %>% 
+  left_join(nac_male$data[, c("ID", "Count", "ratio", "Description")], by = c("name" = "ID")) %>% 
+  mutate(Count = ifelse(is.na(Count), 0, Count),
+         ratio = ifelse(is.na(ratio), 0, ratio))
+
+# plot
+g_nac_male <- ggraph(gg, "unrooted", length = 1) + 
+  geom_edge_link(edge_color = "gray", width = 0.7, n = 10) + 
+  geom_node_point(aes(size = Count), stroke = 1) + 
+  geom_node_point(aes(size = Count, col = ratio)) + 
+  geom_node_text(aes(label = Description),nudge_y = 0.01) +
+  scale_color_gradient(low = cols[1], high = cols[length(cols)]) + 
+  scale_size_continuous(breaks = seq(3, 24, 6), limits = c(3,24)) + 
+  labs(title = "Nac: Male") + 
+  theme(element_text(family = "Arial")) +
+  theme_graph()
+
+
+# OFC female --------------------------------------------------------------
+
+ofc_male <- organize_data(enriched_df_diff, "OFC_female")
+
+# Create tree and leaf object
+hc <- hclust(dist(ofc_male$msim), "average")
+tal_nac <- treeAndLeaf(hc)
+class(tal_ofc) <- "igraph"
+
+# Modify graph
+gg <- as_tbl_graph(tal_ofc, directed = F) %>% 
+  activate(nodes) %>% 
+  left_join(ofc_male$data[, c("ID", "Count", "ratio", "Description")], by = c("name" = "ID")) %>% 
+  mutate(Count = ifelse(is.na(Count), 0, Count),
+         ratio = ifelse(is.na(ratio), 0, ratio))
+
+# plot
+g_ofc_female <- ggraph(gg, "unrooted", length = 0.1) + 
+  geom_edge_link(edge_color = "gray",  width = 0.7, n = 10) + 
+  geom_node_point(aes(size = Count), stroke = 1) + 
+  geom_node_point(aes(size = Count, col = ratio)) + 
+  geom_node_text(aes(label = Description), nudge_y = 0.01) +
+  scale_color_gradient(low = cols[1], high = cols[length(cols)]) + 
+  scale_size_continuous(breaks = seq(3, 24, 6), limits = c(3, 24)) + 
+  theme(element_text(family = "Arial")) +
+  labs(title = "OFC: Female") + 
+  theme_graph()
+
+
+# Arrange graphs
+ggarrange(g_nac_male,g_ofc_female, common.legend = T)
+
+ggsave("results/plots_paper/tal_enrichment.svg", width = 10, height = 7, dpi = 300)
