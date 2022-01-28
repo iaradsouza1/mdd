@@ -14,6 +14,7 @@ library(RedeR)
 # Load diff genes table
 load("results/diff_exp/diff_df.rda")
 gwas_intersections <- read_csv("results/tables/gwas_intersection.csv")
+gwas_genes <- unique(gwas_intersections$hgnc_symbol)
 
 # FUNCTIONS ---------------------------------------------------------------
 
@@ -76,9 +77,11 @@ addGraph(rdp, g)
 
 # Plot network layoout ----------------------------------------------------
 
-nodes <- read_tsv("results/networks/nodes2")
-edges <- read_delim("results/networks/edges2", delim = "\t")
+# nodes <- read_tsv("results/networks/nodes2")
+# edges <- read_delim("results/networks/edges2", delim = "\t")
 
+nodes <- read_tsv("~/Área de trabalho/redes/v3/nodes4")
+edges <- read_delim("~/Área de trabalho/redes/v3/edges4", delim = "\t")
 
 # Mark nodes as GWAS
 nodes %<>% 
@@ -95,32 +98,32 @@ V(g)$b <- ifelse(V(g)$alias %in% unique(diff_df$hgnc_symbol[diff_df$type == "DTE
 V(g)$c <- ifelse(V(g)$alias %in% unique(diff_df$hgnc_symbol[diff_df$type == "DTU"]), 1, 0)
 
 ggraph(g, x = x, y = y) + 
-  geom_edge_link0(edge_color = "gray", alpha = 0.7, width = 0.4) +
+  geom_edge_link0(edge_color = "gray", alpha = 0.7, width = 0.2) +
   geom_scatterpie(
     cols = c("a", "b", "c"),
     data = as_data_frame(g, "vertices") %>% filter(gwas == "gwas"),
     colour = NA,
     n = 5,
-    pie_scale = 1,
+    pie_scale = 1.3,
   show.legend = F) +
   geom_scatterpie(
     cols = c("a", "b", "c"),
     data = as_data_frame(g, "vertices") %>% filter(gwas == "not_gwas"),
     colour = NA,
-    pie_scale = 0.18,
+    pie_scale = 0.2,
     show.legend = F
   ) +
-  geom_node_text(aes(label = alias), size = 1.5, nudge_x = 10, nudge_y = 10) + 
+  geom_node_text(aes(label = alias), size = 1.1, nudge_x = 10, nudge_y = 10) + 
   #geom_node_label(aes(label = alias)) + 
   scale_fill_manual(values = c("#0ac80aff", "#4f4affff", "#ff822fff")) +
   coord_fixed() +
   theme_graph() -> p
 
 # Save 
-svg(filename = "results/plots_paper/rede2.svg", height = 20, width = 20)
+svg(filename = "results/plots_paper/rede2.svg", height = 10, width = 10)
 print(p)
 dev.off()
 
-# Percentage of total genes in the network: 49,43%%
+# Percentage of total genes in the network: 43,72%%
 n_distinct(nodes$alias) / n_distinct(diff_df$hgnc_symbol)
 

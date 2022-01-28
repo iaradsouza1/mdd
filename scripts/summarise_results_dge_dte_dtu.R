@@ -28,7 +28,7 @@ df_res_padj_gene_out_filtered %<>%
     tx2gene %>% dplyr::select(ensembl_gene_id, hgnc_symbol) %>% unique(), 
     by = c("gene" = "ensembl_gene_id"))
 
-df_res_padj_tx_out_filtered %<>%
+df_res_padj_tx_out_filtered %<>% 
   inner_join(
     tx2gene %>% dplyr::select(ensembl_gene_id, hgnc_symbol) %>% unique(), 
     by = c("geneID" = "ensembl_gene_id")) %>% 
@@ -78,7 +78,8 @@ dge <- df_res_padj_gene_out_filtered %>%
   unique() %>% 
   mutate(type = "DGE")
 dte <- df_res_padj_tx_out_filtered %>% 
-  dplyr::select(gene = geneID, hgnc_symbol, group) %>% 
+  filter(transcript <= 0.05) %>% 
+  dplyr::select(gene = geneID, hgnc_symbol, group) %>%
   unique() %>% 
   mutate(type = "DTE")
 dtu <- isa_df %>% 

@@ -8,6 +8,7 @@ library(igraph)
 library(GOSemSim)
 library(tidygraph)
 library(ggraph)
+library(RColorBrewer)
 library(ggpubr)
 
 # CREATE FUNCTIONS
@@ -159,6 +160,8 @@ organize_data <- function(enriched_df_diff, contrast) {
   
 }
 
+cols <- brewer.pal(9, "OrRd")
+
 # Nac male ----------------------------------------------------------------
 
 nac_male <- organize_data(enriched_df_diff, "Nac_male")
@@ -182,7 +185,7 @@ g_nac_male <- ggraph(gg, "unrooted", length = 1) +
   geom_node_point(aes(size = Count, col = ratio)) + 
   geom_node_text(aes(label = Description),nudge_y = 0.01) +
   scale_color_gradient(low = cols[1], high = cols[length(cols)]) + 
-  scale_size_continuous(breaks = seq(3, 24, 6), limits = c(3,24)) + 
+  scale_size_continuous(breaks = seq(2, 18, 6), limits = c(2, 18)) + 
   labs(title = "Nac: Male") + 
   theme(element_text(family = "Arial")) +
   theme_graph()
@@ -190,17 +193,17 @@ g_nac_male <- ggraph(gg, "unrooted", length = 1) +
 
 # OFC female --------------------------------------------------------------
 
-ofc_male <- organize_data(enriched_df_diff, "OFC_female")
+ofc_female <- organize_data(enriched_df_diff, "OFC_female")
 
 # Create tree and leaf object
-hc <- hclust(dist(ofc_male$msim), "average")
-tal_nac <- treeAndLeaf(hc)
+hc <- hclust(dist(ofc_female$msim), "average")
+tal_ofc <- treeAndLeaf(hc)
 class(tal_ofc) <- "igraph"
 
 # Modify graph
 gg <- as_tbl_graph(tal_ofc, directed = F) %>% 
   activate(nodes) %>% 
-  left_join(ofc_male$data[, c("ID", "Count", "ratio", "Description")], by = c("name" = "ID")) %>% 
+  left_join(ofc_female$data[, c("ID", "Count", "ratio", "Description")], by = c("name" = "ID")) %>% 
   mutate(Count = ifelse(is.na(Count), 0, Count),
          ratio = ifelse(is.na(ratio), 0, ratio))
 
@@ -211,13 +214,42 @@ g_ofc_female <- ggraph(gg, "unrooted", length = 0.1) +
   geom_node_point(aes(size = Count, col = ratio)) + 
   geom_node_text(aes(label = Description), nudge_y = 0.01) +
   scale_color_gradient(low = cols[1], high = cols[length(cols)]) + 
-  scale_size_continuous(breaks = seq(3, 24, 6), limits = c(3, 24)) + 
+  scale_size_continuous(breaks = seq(2, 18, 6), limits = c(2, 18)) + 
   theme(element_text(family = "Arial")) +
   labs(title = "OFC: Female") + 
   theme_graph()
 
 
+# aINS Female -------------------------------------------------------------
+
+ains_female <- organize_data(enriched_df_diff, "aINS_female")
+
+# Create tree and leaf object
+hc <- hclust(dist(ains_female$msim), "average")
+tal_ains <- treeAndLeaf(hc)
+class(tal_ains) <- "igraph"
+
+# Modify graph
+gg <- as_tbl_graph(tal_ains, directed = F) %>% 
+  activate(nodes) %>% 
+  left_join(ains_female$data[, c("ID", "Count", "ratio", "Description")], by = c("name" = "ID")) %>% 
+  mutate(Count = ifelse(is.na(Count), 0, Count),
+         ratio = ifelse(is.na(ratio), 0, ratio))
+
+# plot
+g_ains_female <- ggraph(gg, "unrooted", length = 0.1) + 
+  geom_edge_link(edge_color = "gray",  width = 0.7, n = 10) + 
+  geom_node_point(aes(size = Count), stroke = 1) + 
+  geom_node_point(aes(size = Count, col = ratio)) + 
+  geom_node_text(aes(label = Description), nudge_y = 0.01) +
+  scale_color_gradient(low = cols[1], high = cols[length(cols)]) + 
+  scale_size_continuous(breaks = seq(2, 18, 6), limits = c(2, 18)) + 
+  theme(element_text(family = "Arial")) +
+  labs(title = "aINS: Female") + 
+  theme_graph()
+
+
 # Arrange graphs
-ggarrange(g_nac_male,g_ofc_female, common.legend = T)
+ggarrange(g_nac_male, g_ofc_female, g_ains_female, common.legend = T)
 
 ggsave("results/plots_paper/tal_enrichment.svg", width = 10, height = 7, dpi = 300)
