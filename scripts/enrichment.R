@@ -137,7 +137,6 @@ save(enriched_df_diff, file = "results/tx_enrich/go_terms_tx_by_group.rda")
 cutoff <- 0
 sizeIntervals <- 5 # usar 3 para o idx 8 e 5 para o 9
 
-
 organize_data <- function(enriched_df_diff, contrast) {
   
   data <- enriched_df_diff[[contrast]]

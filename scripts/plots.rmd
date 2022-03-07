@@ -151,7 +151,7 @@ df_plot %>%
 ggplot(aes(x = as.numeric(x_axis), y = n, fill = type)) +
   geom_bar(stat = "identity", position = "stack") +
   facet_grid(cols = vars(region)) + 
-  scale_y_continuous(name = "Number of transcriptionally altered genes", limits = c(0, 400), breaks = seq(0, 400, 50), minor_breaks = F) +
+  scale_y_continuous(name = "Number of transcriptionally altered genes", limits = c(0, 350), breaks = seq(0, 350, 50), minor_breaks = F) +
   #facet_zoom(x = x_axis %in% c("Female", "Male", "Intersection")) +
   scale_fill_manual(name = "", values = color_scale) +
   scale_x_continuous("",
@@ -164,8 +164,8 @@ ggplot(aes(x = as.numeric(x_axis), y = n, fill = type)) +
       axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-ggsave("results/plots_paper/fig2A.pdf", height = 4, width = 7)
-ggsave("results/plots_paper/fig2A.png", height = 4, width = 7)
+ggsave("results/plots_paper/fig2A.pdf", height = 3.5, width = 7)
+ggsave("results/plots_paper/fig2A.png", height = 3.5, width = 7)
 ```
 
 ## Figure 2B

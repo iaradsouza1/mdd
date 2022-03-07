@@ -127,3 +127,133 @@ dev.off()
 # Percentage of total genes in the network: 43,72%%
 n_distinct(nodes$alias) / n_distinct(diff_df$hgnc_symbol)
 
+
+# Plot PPI netwoks for each brain region and sex --------------------------
+
+# Create igraph object to selected genes
+build_graph <- function(int, genes, neighboors = T) {
+  
+  if (neighboors) {
+    int_temp <- int[int$preferredName_A %in% genes | int$preferredName_B %in% genes, ]
+  } else {
+    int_temp <- int[int$preferredName_A %in% genes & int$preferredName_B %in% genes, ]
+  }
+  
+  # Remove duplicates (create undirected graph)
+  idx <- !duplicated(t(apply(int_temp, 1, sort)))
+  int_temp <- int_temp[idx,]
+  
+  # Create graph
+  g <- graph_from_edgelist(as.matrix(int_temp[,1:2]), directed = F)
+  
+  return(g)
+}
+
+# Filter genes in differential df by each group
+filter_diff <- function(diff_df, genes, gr) {
+  diff_df %>% 
+    filter(group %in% gr & hgnc_symbol %in% genes) %>% 
+    unique() -> diff_df
+  
+  d_sym <- anyDuplicated(diff_df$hgnc_symbol)
+  if (d_sym != 0) {
+    message(paste("Dataframe with duplicated genes!", "Check if graph has genes with multiple types", gr))
+  }
+  return(diff_df)
+}
+
+# Create pie chart for nodes
+# Say which genes are which types
+create_ann_pie <- function(diff_df, genes) {
+  
+  # Create list with types
+  tps <- lapply(split(diff_df$type, diff_df$hgnc_symbol), unique)
+  tps <- tps[diff_df$hgnc_symbol]
+  
+  if(all(names(tps) == diff_df$hgnc_symbol)) {
+    message("label types and genes are ok.")
+  }
+  
+  # Create list to pie chart
+  ls <- list()
+  f_ls <- lapply(seq_along(genes), function(i) {
+    if (genes[i] %in% names(tps)) {
+      ls[[i]] <- as.integer(c("NONE", "DGE", "DTE", "DTU") %in% tps[names(tps) %in% genes[i]][[1]])
+    } else {
+      ls[[i]] <- c(1, 0, 0, 0)
+    }
+  })
+  
+  return(f_ls)
+}
+
+# Set param for igraph object before plotting
+set_graph_params <- function(g, dict, f_ls) {
+  
+  genes <- V(g)$name
+  
+  # Set node labels
+  labels <- sapply(seq_along(genes), function(i) {
+    if(genes[i] %in% diff_df$hgnc_symbol) {
+      #if(genes[i] %in% dict$hgnc_symbol) {
+      return(genes[i])
+    } else {
+      return(NA)
+    }
+  })
+  
+  # Set params
+  V(g)$pie.color <- list(c("#666666ff", "#008000ff", "#04009eff", "#ff6600ff"))
+  V(g)$shape <- "pie"
+  V(g)$pie <- f_ls
+  V(g)$size <- 2
+  V(g)$label <- labels
+  V(g)$label.cex <- 0.6
+  V(g)$label.dist <- 0.5
+  V(g)$label.color <- "black"
+  V(g)$frame.color <- NA
+  
+  return(g)
+  
+}
+
+l_groups <- map(split(diff_df$hgnc_symbol, diff_df$group), unique)
+
+graphs_by_group <- imap(l_groups, function(x, i){
+  
+  # CHANGE HERE IF YOU WANT FIRST NEIGHBORS
+  # (also remember to change the path)
+  include_first_neighbors <- F
+  
+  g <- build_graph(int, x, neighboors = include_first_neighbors)
+  genes <- V(g)$name
+  
+  diff_temp <- filter_diff(diff_df, genes, i)
+  f_ls <- create_ann_pie(diff_temp, genes)
+  
+  # To set all gene labels, set diff_df instead of diff_temp
+  g <- set_graph_params(g, dc, f_ls)
+  
+  if(include_first_neighbors){
+    colors_list <- V(g)$pie
+    degrees <- degree(g,v=V(g))
+    filter <- !(paste(colors_list) == "c(1, 0, 0, 0)" & degrees == 1)
+    g <- induced_subgraph(g, filter)
+  }
+  
+  if(length(V(g)$pie.color) != 0){
+    pdf(paste0("results/networks/", i, ".pdf"), width = 10, height = 10)
+    plot(g)
+    dev.off()
+  }
+  
+  return(list(graph = g, diff_temp = diff_temp, genes_from_graph = V(g)$name))
+  
+})
+
+save(graphs_by_group, file = "results/networks/graphs_by_group_wo_nbor.rda")
+
+  
+  
+  
+
