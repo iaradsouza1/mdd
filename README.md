@@ -36,7 +36,7 @@ This project is organized in the following directories:
 
 - **Quantification**
 
-- Script for download, processing and quantification by kallisto;  
+Script for download, processing and quantification by kallisto;  
 
 - **Exploratory analysis**: 
     - Metadata:  
@@ -69,7 +69,7 @@ This project is organized in the following directories:
 
 - **Functional analyses**:  
     - `network`: Network inference using stringDB. Visualization by `RedeR` and `ggraph`.  
-    - `enrichment`: Enrichment analysis of transcriptionally altered genes using clusterProfiler.  
+    - `enrichment`: Enrichment analysis of transcriptionally altered genes using `clusterProfiler`.  
     - `gwas_intersections`: Get genes with genomic regions related to depression using `gwasrapidd`.  
     - `intersection_analysis`: intersection analysis by sex, brain region, and method used.   
 
