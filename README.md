@@ -74,7 +74,8 @@ Script for download, processing and quantification by kallisto;
     - `intersection_analysis`: intersection analysis by sex, brain region, and method used.   
 
 - **Additional scripts**:  
-    - `plots` and `plot_dtu`: Description of figures produced to the paper.    
+    - `plots` and `plot_dtu`: Description of figures produced to the paper.
+    - `supp_fig_variants_by_donors`: Description of Supplementary Figures 9 and 10, which represent the presence of depression-associated SNPs on the samples considered. 
 
 
 
