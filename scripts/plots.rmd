@@ -38,6 +38,10 @@ load("results/diff_exp/diff_df.rda")
 load("results/important_variables/ann.rda")
 load("results/intersects/intersects.rda")
 gwas_intersections <- read.csv("results/tables/gwas_intersection.csv")
+
+# Split columns
+diff_df %<>% 
+  separate(group, into = c("region", "sex"), sep = "_", remove = F)
 ```
 
 # Figures in the main paper
@@ -76,10 +80,6 @@ Figure 1B was produced as described at the 'network.R' in 'scripts' directory.
 ## Figure 2A
 
 ```{r, warning=FALSE, message=FALSE}
-# Split columns
-diff_df %<>% 
-  separate(group, into = c("region", "sex"), sep = "_", remove = F)
-
 # Funcion to identify significant genes common to male and female groups
 count_int <- function(tbl) {
   tbl %>% 
