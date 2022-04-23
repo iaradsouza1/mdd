@@ -27,7 +27,9 @@ This project is organized in the following directories:
         - `Nac/`:  
         - `Sub/`:  
     - `meta/`:  metadata for BioProject SRP115956.   
-        - `SraRunTable.txt` : study metadata  
+        - `SraRunTable.txt` : study metadata;
+        - `Metadata.csv` :  Information on individual samples. This information was previously available here: http://neuroscience.mssm.edu/nestler/contecenter/listchromatingenedatabase.html. 
+    - `vcfs`: VCF files filtered by the variants showed in Table 1 from the paper.
 
  - `scripts/`: Holds all the scripts used in the analyses;  
  - `results/`: Holds results from each step analysis.  
