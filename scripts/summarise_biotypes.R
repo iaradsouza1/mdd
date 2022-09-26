@@ -46,7 +46,7 @@ readr::write_csv(dte_w_biotype, "results/diff_exp/dte_w_biotype.csv")
 
 # 2.3. Pegando biotipo dos DTU ---------------------------------------
 
-
+dtu_w_biotype <- readr::read_csv("results/ISA/dtu_w_biotype.csv")
 
 # 3. Plotando as porcentagens ---------------------------------------
 plot_biotype_bar <- function(data, id_col, n_col) {
@@ -78,5 +78,12 @@ dte_plot <- dte_w_biotype %>%
   ungroup() %>%
   plot_biotype_bar(., id_col = transcript_biotype, n_col = biotype_n)
 
+dtu_plot <- dtu_w_biotype %>%
+  group_by(iso_biotype) %>%
+  summarise(biotype_n = n() / length(unique(dtu_w_biotype$isoform_id))* 100) %>%
+  ungroup() %>%
+  plot_biotype_bar(., id_col = iso_biotype, n_col = biotype_n)
+
 ggsave(dge_plot, filename = "results/diff_exp/dge_biotypes.pdf")
 ggsave(dte_plot, filename = "results/diff_exp/dte_biotypes.pdf")
+ggsave(dtu_plot, filename = "results/diff_exp/dtu_biotypes.pdf")
