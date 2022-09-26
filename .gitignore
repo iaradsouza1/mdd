@@ -20,3 +20,4 @@ renv/*
 slurm*
 run*
 data/*
+results/diff_exp/*
