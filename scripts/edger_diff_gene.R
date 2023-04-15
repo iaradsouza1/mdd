@@ -2,6 +2,8 @@
 
 # GENE
 library(edgeR)
+library(dplyr)
+library(purrr)
 
 # Load metadata -----------------------------------------------------------
 load("results/important_variables/ann.rda")
@@ -14,9 +16,19 @@ load("results/txi/txi_gene.rda")
 
 # Differential expression -------------------------------------------------
 
-# Creating dds object with design matrix including the selected covariate ('rin' and 'ph')
-y <- DGEList(counts = txi$counts,
-             group = ann$group)
+# Creating DGElist object with design matrix including selected covariates ('rin' and 'ph').
+# See https://bioconductor.org/packages/release/bioc/vignettes/tximport/inst/doc/tximport.html#edgeR
+counts <- txi$counts
+norm_mat <- txi$length
+norm_mat <- norm_mat/exp(rowMeans(log(norm_mat)))
+norm_counts <- counts / norm_mat
+eff_library_size <- calcNormFactors(norm_counts, method = "TMM") * colSums(norm_counts)
+norm_mat <- sweep(norm_mat, 2, eff_library_size, "*")
+norm_mat <- log(norm_mat)
+
+# Creating a DGEList object for use in edgeR.
+y <- DGEList(counts, group = ann$group)
+y <- scaleOffset(y, norm_mat)
 
 # Design matrix
 design <- model.matrix(~ 0 + ph + rin + group, data = ann)
@@ -40,7 +52,7 @@ ct <- makeContrasts(
 
 # Filter low expression genes
 keep <- filterByExpr(y, group = y$samples$group)
-y <- y[keep, , keep.lib.sizes = FALSE]
+y <- y[keep,]
 
 # TMM normalization
 y <- calcNormFactors(y)
@@ -74,4 +86,9 @@ map(comp, function(c) {
 }) -> lrt_comp
 names(lrt_comp) <- comp
 
+if(!dir.exists("results/diff_exp/")) {
+  dir.create("results/diff_exp/")
+}
+
 save(df_edger_ph_rin_group_gene, lrt_comp, file = "results/diff_exp/edger_gene_rin_ph_diff.rda")
+
