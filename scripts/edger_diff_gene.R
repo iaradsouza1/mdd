@@ -34,6 +34,11 @@ y <- scaleOffset(y, norm_mat)
 design <- model.matrix(~ 0 + ph + rin + group, data = ann)
 colnames(design)[3:ncol(design)] <- gsub("group", "", colnames(design)[3:ncol(design)])
 
+# design <- model.matrix(~ 0 + ph + rin + region:phenotype:gender, data = ann)
+# colnames(design)[3:ncol(design)] <- sapply(strsplit(colnames(design)[3:ncol(design)], ":"), function(x) {
+#   paste(gsub("region", "", x[1]), gsub("phenotype", "", x[2]), gsub("gender", "", x[3]), sep = "_")
+# })
+
 ct <- makeContrasts(
   aINS_female = aINS_MDD_female-aINS_CTRL_female,
   aINS_male = aINS_MDD_male-aINS_CTRL_male,
@@ -50,17 +55,17 @@ ct <- makeContrasts(
   levels = design
 )
 
-# Filter low expression genes
+# Filter genes of low expression
 keep <- filterByExpr(y, group = y$samples$group)
 y <- y[keep,]
 
 # TMM normalization
-y <- calcNormFactors(y)
+# y <- calcNormFactors(y)
 
-# Estimate dispersions with  
+# Estimate dispersions with 'estimateGLMRobustDisp'
 y <- estimateGLMRobustDisp(y, design = design, verbose = T)
 
-# Fit
+# Fit model
 fit <- glmFit(y, design = design)
 
 # Extract results for each comparison
@@ -68,7 +73,7 @@ fit <- glmFit(y, design = design)
 # Summary dataframe
 map_df(comp, function(c) {
   
-  cat("Comparison: ", c)
+  cat("Comparison: ", c, )
   
   lrt <- glmLRT(fit, contrast = ct[, c])
   df <- topTags(lrt, n = Inf, adjust.method = "BH", p.value = 0.05)$table
