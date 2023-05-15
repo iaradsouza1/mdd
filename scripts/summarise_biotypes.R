@@ -138,7 +138,8 @@ ggplot(df_plot, aes(x = reorder(biotype, dplyr::desc(biotype_n)), y = biotype_n,
   labs(x = "Feature biotypes", y = "% of feature biotype by the total features") +
   coord_flip() +
   theme_bw() +
-  theme(panel.grid = element_blank()) -> biotype_plot_by_sex
+  theme(panel.grid = element_blank(),
+        strip.background = element_rect(fill = "white")) -> biotype_plot_by_sex
 
 # Save
 ggsave(biotype_plot_by_sex, filename = "results/plots_paper/biotype_by_sexplot.pdf", width = 7, height = 4)
@@ -172,3 +173,65 @@ biotypes_by_sex %>%
 
 names(biot_tests_fisher) <- c("DGE", "DTE", "DTU")
 names(biot_tests_chisq) <- c("DGE", "DTE", "DTU")
+
+
+# Check biotypes by region in females -------------------------------------
+
+biotypes_by_sex %>% 
+  separate(group, into = c("region", "sex"), sep = "_") %>% 
+  arrange(type, biotype) %>% 
+  filter(sex == "female") %>%  
+  group_by(region, type) %>% 
+  mutate(n1 = n()) %>% 
+  ungroup() %>% 
+  group_by(biotype, type,region) %>% 
+  mutate(n2 = n(),
+         prop_by_region = (n2 / n1) * 100) %>% 
+  arrange(desc(type), desc(region)) %>% 
+  ungroup() %>% 
+  dplyr::select(biotype, region, type, prop_by_region) %>% 
+  distinct() -> biotypes_female
+
+ggplot(biotypes_female, aes(x = reorder(biotype, dplyr::desc(prop_by_region)), y = prop_by_region, fill = type)) +
+  geom_col(show.legend = F) + 
+  scale_y_continuous(labels = scales::percent_format(scale = 1), limits = c(0, 100)) +
+  facet_grid(rows = vars(region), cols = vars(type), scales = "free_y") +
+  scale_fill_manual(values = color_scale) + 
+  labs(x = "Feature biotypes", y = "% of feature biotype by the total features") +
+  coord_flip() +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        strip.background = element_rect(fill = "white")) -> plot_biotypes_female
+
+ggsave(plot_biotypes_female, filename = "results/plots_paper/biotype_female.pdf",  width = 10, height = 7)
+
+
+# Check biotypes by region male -------------------------------------------
+
+biotypes_by_sex %>% 
+  separate(group, into = c("region", "sex"), sep = "_") %>% 
+  arrange(type, biotype) %>% 
+  filter(sex == "male") %>%  
+  group_by(region, type) %>% 
+  mutate(n1 = n()) %>% 
+  ungroup() %>% 
+  group_by(biotype, type,region) %>% 
+  mutate(n2 = n(),
+         prop_by_region = (n2 / n1) * 100) %>% 
+  arrange(desc(type), desc(region)) %>% 
+  ungroup() %>% 
+  dplyr::select(biotype, region, type, prop_by_region) %>% 
+  distinct() -> biotypes_male
+
+ggplot(biotypes_male, aes(x = reorder(biotype, dplyr::desc(prop_by_region)), y = prop_by_region, fill = type)) +
+  geom_col(show.legend = F) + 
+  scale_y_continuous(labels = scales::percent_format(scale = 1), limits = c(0, 100)) +
+  facet_grid(rows = vars(region), cols = vars(type), scales = "free_y") +
+  scale_fill_manual(values = color_scale) + 
+  labs(x = "Feature biotypes", y = "% of feature biotype by the total features") +
+  coord_flip() +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        strip.background = element_rect(fill = "white")) -> plot_biotypes_male
+
+ggsave(plot_biotypes_male, filename = "results/plots_paper/biotype_male.pdf",  width = 10, height = 7)
