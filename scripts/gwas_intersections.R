@@ -3,13 +3,15 @@
 
 library(dplyr)
 library(purrr)
+library(gwasrapidd)
+library(biomaRt)
 
 # Get studies related to 'major depressive disorder' and 'unipolar depression'.
 efo_id <- c(
   unipolar_depression        = "EFO_0003761",
   major_depressive_disorder  = "MONDO_0002009"
 )
-mdd_results <- get_studies(efo_id = efo_id, set_operation = "intersection") 
+mdd_results <- get_studies(efo_id = efo_id, set_operation = "intersection")
 
 mdd_filtered <- mdd_results@publications %>% 
   filter(publication_date > "2018-01-01")
@@ -39,7 +41,7 @@ map_dfr(studies, function(study_id) {
   assoc_2 <- associations@associations %>% 
     dplyr::select(association_id, pvalue, pvalue_description, range, beta_number, beta_direction)
 
-  associations_data <- reduce(list(assoc_1, assoc_2), inner_join, by = "association_id")
+  associations_data <- purrr::reduce(list(assoc_1, assoc_2), inner_join, by = "association_id")
   
   associations_data
 
