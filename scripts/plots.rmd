@@ -299,11 +299,12 @@ tmp7 <- data.frame(sex = c("Female", "Male"),
                    xmax = c(1.35,2.35))
 
 df_plot2 <- inner_join(df_plot2, tmp7, by = "sex")
+df_plot2$exclusive <- factor(df_plot2$exclusive, levels = c("4", "3", "2", "Exclusive"))
 
 # Define colors to each intersection
 cols_intersects <- c(
-  "2" = "grey40", 
-  "3" = "grey80", 
+  "2" = "grey80", 
+  "3" = "grey40", 
   "4" = "black",
   "Exclusive" = "#8a0cb1ff"
 )
