@@ -64,6 +64,8 @@ s_map %>%
   combinescores(evidences = c("escore", "ascore", "dscore"), confLevel = 0.4) %>% 
   unique() -> int
 
+save(int, file = "results/networks/int.rda")
+
 # RedeR
 
 # Here we select proper coordinates to our network
