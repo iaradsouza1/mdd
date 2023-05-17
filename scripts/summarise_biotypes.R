@@ -1,5 +1,6 @@
 library(dplyr)
 library(purrr)
+library(tidyr)
 library(ggplot2)
 library(patchwork)
 library(stringr)
@@ -104,23 +105,29 @@ ggsave(biotype_plot, file = "results/plots_paper/biotype_plot.pdf", width = 7, h
 dge_plot <- dge_w_biotype %>% 
   separate(group, into = c("region", "sex")) %>% 
   group_by(biotype, sex) %>% 
-  summarise(biotype_n = n() / length(unique(dge_w_biotype$gene_id)) * 100) %>% 
+  summarise(biotype_n = n()) %>% 
   ungroup() %>% 
-  mutate(type = "DGE")
+  group_by(sex) %>% 
+  mutate(prop = biotype_n / sum(biotype_n) * 100,
+         type = "DGE")
 
 dte_plot <- dte_w_biotype %>% 
   separate(group, into = c("region", "sex")) %>% 
   group_by(biotype, sex) %>% 
-  summarise(biotype_n = n() / length(unique(dte_w_biotype$transcript_id)) * 100) %>% 
+  summarise(biotype_n = n()) %>% 
   ungroup() %>% 
-  mutate(type = "DTE")
+  group_by(sex) %>% 
+  mutate(prop = biotype_n / sum(biotype_n) * 100,
+         type = "DTE")
 
 dtu_plot <- dtu_w_biotype %>% 
   separate(group, into = c("region", "sex")) %>% 
   group_by(biotype, sex) %>% 
-  summarise(biotype_n = n() / length(unique(dtu_w_biotype$isoform_id)) * 100) %>% 
+  summarise(biotype_n = n()) %>% 
   ungroup() %>% 
-  mutate(type = "DTU")
+  group_by(sex) %>% 
+  mutate(prop = biotype_n / sum(biotype_n) * 100,
+         type = "DTU")
 
 df_plot <- Reduce(bind_rows, list(dge_plot, dte_plot, dtu_plot))
 df_plot$biotype <- gsub("_", " ", df_plot$biotype)
@@ -129,7 +136,7 @@ df_plot$biotype <- gsub("_", " ", df_plot$biotype)
 color_scale <- c("DGE" = "#0ac80aff", "DTE" = "#4f4affff", "DTU" = "#ff822fff")
 
 # Female and male together
-ggplot(df_plot, aes(x = reorder(biotype, dplyr::desc(biotype_n)), y = biotype_n, fill = type)) +
+ggplot(df_plot, aes(x = reorder(biotype, dplyr::desc(prop)), y = prop, fill = type)) +
   geom_col(show.legend = F) + 
   scale_y_continuous(labels = scales::percent_format(scale = 1), limits = c(0, 100)) +
   facet_grid(rows = vars(type), cols = vars(sex), scales = "free_y",
@@ -158,7 +165,7 @@ biotypes_by_sex %>%
   group_map(~ {
     cat(.y$type, sep = "\n")
     cont_table <- table(.x$biotype, .x$sex)
-    return(fisher.test(cont_table))
+    return(list(fisher = fisher.test(cont_table), count_table = cont_table))
   }) -> biot_tests_fisher
 
 biotypes_by_sex %>% 
@@ -174,6 +181,31 @@ biotypes_by_sex %>%
 names(biot_tests_fisher) <- c("DGE", "DTE", "DTU")
 names(biot_tests_chisq) <- c("DGE", "DTE", "DTU")
 
+# Divide plot by protein coding and non-coding ----------------------------
+df_plot %>% 
+  mutate(
+    coding = case_when(
+      biotype == "protein coding" ~ "coding",
+      .default = "non-coding"
+  )) %>% 
+  group_by(coding, sex, type) %>% 
+  mutate(prop_coding = sum(prop))  %>%
+  dplyr::select(-biotype_n, -biotype, -prop) %>% 
+  unique() -> df_plot_coding
+
+ggplot(df_plot_coding, aes(x = reorder(coding, dplyr::desc(prop_coding)), y = prop_coding, fill = type)) +
+  geom_col(show.legend = F) + 
+  scale_y_continuous(labels = scales::percent_format(scale = 1), limits = c(0, 100)) +
+  facet_grid(rows = vars(type), cols = vars(sex), scales = "free_y",
+             labeller = labeller(sex = as_labeller(c("female" = "Female", "male" = "Male")))) +
+  scale_fill_manual(values = color_scale) + 
+  labs(x = "Feature biotypes", y = "% of feature biotype by the total features") +
+  coord_flip() +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        strip.background = element_rect(fill = "white")) -> biotype_plot_coding
+
+ggsave(biotype_plot_coding, filename = "results/plots_paper/biotype_sex_coding.pdf", width = 7, height = 4)
 
 # Check biotypes by region in females -------------------------------------
 
@@ -184,7 +216,7 @@ biotypes_by_sex %>%
   group_by(region, type) %>% 
   mutate(n1 = n()) %>% 
   ungroup() %>% 
-  group_by(biotype, type,region) %>% 
+  group_by(biotype, type, region) %>% 
   mutate(n2 = n(),
          prop_by_region = (n2 / n1) * 100) %>% 
   arrange(desc(type), desc(region)) %>% 
