@@ -267,3 +267,6 @@ ggplot(biotypes_male, aes(x = reorder(biotype, dplyr::desc(prop_by_region)), y =
         strip.background = element_rect(fill = "white")) -> plot_biotypes_male
 
 ggsave(plot_biotypes_male, filename = "results/plots_paper/biotype_male.pdf",  width = 10, height = 7)
+
+
+# -------------------------------------------------------------------------
