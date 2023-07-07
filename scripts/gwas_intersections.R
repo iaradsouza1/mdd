@@ -5,6 +5,7 @@ library(dplyr)
 library(purrr)
 library(gwasrapidd)
 library(biomaRt)
+library(tidyr)
 
 # Get studies related to 'major depressive disorder' and 'unipolar depression'.
 efo_id <- c(
@@ -82,3 +83,12 @@ intersection <- inner_join(risk_alleles, diff_df, by = c("ensembl_gene_name" = "
 # Save 
 save(intersection, file = "results/diff_exp/gwas_intersections.rda")
 write.csv(intersection, file = "results/tables/gwas_intersection.csv", row.names = F, quote = F)
+
+# Create Supplementary Table 
+intersection %>% 
+  separate(group, into = c("region", "sex"), sep = "_") %>% 
+  dplyr::select(sex, region, hgnc_symbol, type, variant_id, functional_class, pvalue) %>% 
+  mutate(pvalue = as.character(scales::scientific(pvalue))) %>% 
+  arrange(sex, region) %>% 
+  write.csv("results/tables/table2_gwas.csv", row.names = F, quote = F)
+  
