@@ -10,7 +10,7 @@ library(ggraph)
 library(magrittr)
 library(RedeR)
 
-# ------------------ GET GENES AND INTERACTIONS -------------------------
+# ------------------ GET GENES AND INTERACTIONS ---------------------------
 # Load diff genes table
 load("results/diff_exp/diff_df.rda")
 gwas_intersections <- read_csv("results/tables/gwas_intersection.csv")
@@ -82,6 +82,9 @@ addGraph(rdp, g)
 nodes <- read_tsv("results/networks/model_nodes.txt")
 edges <- read_delim("results/networks/model_edges.txt")
 
+nodes <- read_tsv("~/model_nodes.txt")
+edges <- read_delim("~/model_edges.txt")
+
 # Import nodes coordinates determined by vivagraph
 layout <- read.csv("results/networks/layout.csv")
 
@@ -115,7 +118,7 @@ ggraph(g, x = x, y = y) +
     pie_scale = 0.2,
     show.legend = F
   ) +
-  geom_node_text(aes(label = alias), size = 1.1, nudge_x = 2, nudge_y = 4) + 
+  geom_node_text(aes(label = alias), size = 0.9, nudge_x = 2, nudge_y = 4) + 
   #geom_node_label(aes(label = alias)) + 
   scale_fill_manual(values = c("#0ac80aff", "#4f4affff", "#ff822fff")) +
   coord_fixed() +
@@ -131,7 +134,7 @@ svg(filename = "results/plots_paper/network.svg", height = 10, width = 10)
 print(p)
 dev.off()
 
-# Percentage of total genes in the network: 51,52%%
+# Percentage of total genes in the network: 51,24%
 n_distinct(nodes$alias) / n_distinct(diff_df$hgnc_symbol)
 
 
@@ -226,7 +229,7 @@ set_graph_params <- function(g, dict, f_ls) {
 
 l_groups <- map(split(diff_df$hgnc_symbol, diff_df$group), unique)
 
-graphs_by_group <- imap(l_groups, function(x, i){
+graphs_by_group <- imap(l_groups, function(x, i) {
   
   # CHANGE HERE IF YOU WANT FIRST NEIGHBORS
   # (also remember to change the path)
@@ -241,14 +244,14 @@ graphs_by_group <- imap(l_groups, function(x, i){
   # To set all gene labels, set diff_df instead of diff_temp
   g <- set_graph_params(g, dc, f_ls)
   
-  if(include_first_neighbors){
+  if(include_first_neighbors) {
     colors_list <- V(g)$pie
     degrees <- degree(g,v=V(g))
     filter <- !(paste(colors_list) == "c(1, 0, 0, 0)" & degrees == 1)
     g <- induced_subgraph(g, filter)
   }
   
-  if(length(V(g)$pie.color) != 0){
+  if(length(V(g)$pie.color) != 0) {
     pdf(paste0("results/networks/", i, ".pdf"), width = 10, height = 10)
     plot(g)
     dev.off()

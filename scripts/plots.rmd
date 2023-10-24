@@ -62,7 +62,7 @@ diff_df %>%
   ggplot(aes(x = col, y = n, fill = type)) +
   geom_bar(position = "stack", stat = "identity") +
   labs(x = "", y = "Number of transcriptionally altered genes", fill = "") +
-  scale_y_continuous(limits = c(0, 1200), breaks = seq(0, 1200, 200)) + 
+  scale_y_continuous(limits = c(0, 1400), breaks = seq(0, 1400, 200)) + 
   scale_fill_manual(values = color_scale) + 
   theme_classic() + 
   theme(
@@ -152,7 +152,7 @@ df_plot %>%
 ggplot(aes(x = as.numeric(x_axis), y = n, fill = type)) +
   geom_bar(stat = "identity", position = "stack") +
   facet_grid(cols = vars(region)) + 
-  scale_y_continuous(name = "Number of transcriptionally altered genes", limits = c(0, 460), breaks = seq(0, 460, 50), minor_breaks = F) +
+  scale_y_continuous(name = "Number of transcriptionally altered genes", limits = c(0, 500), breaks = seq(0, 500, 50), minor_breaks = F) +
   #facet_zoom(x = x_axis %in% c("Female", "Male", "Intersection")) +
   scale_fill_manual(name = "", values = color_scale) +
   scale_x_continuous("",
@@ -181,7 +181,7 @@ diff_df %>%
   )) -> tmp8
 
 # Create list of genes in female, in male, and in both sexes
-l_genes <- split(tmp8$gene, tmp8$sex)
+l_genes <- split(tmp8$hgnc_symbol, tmp8$sex)
 
 # Plot Venn diagram
 cairo_pdf(file = "results/plots_paper/fig2B.pdf", width = 4, height = 4)
@@ -357,11 +357,8 @@ ggsave("results/plots_paper/fig2C_2.png", height = 4, width = 5, dpi = 300)
 
 ## Figure 3
 
-Enrichment plot was built as described in `enrichment.R` in `script` directory. 
+Figure 3 was produced on the biotype analysis, in the `summarise_biotypes.R` script.
 
-## Figure 4 and 5
-
-Figures 4 and 5 were built as described in `plot_dtu.R` in `script` directory.
 
 # Supplementary Figures
 
@@ -397,14 +394,15 @@ diff_df %>%
   ggplot(aes(x = sex, y = p_gt, fill = gt)) +
     geom_bar(stat = "identity") + 
     facet_grid(.~ region) +
-    scale_y_continuous(breaks = seq(0,1,0.2), 
-                       labels = scales::percent(seq(0,1,0.2))) +
+    scale_y_continuous(breaks = seq(0,1,0.25), 
+                       labels = scales::percent(seq(0,1,0.25))) +
     scale_x_discrete(labels = c("female" = expression("\u2640"), 
                                 "male" = expression("\u2642"))) +
     scale_fill_manual(values = c("G" = "#5E835Fff", "T" = "#85587C"),
                       labels = c("G" = "Genes", "T" = "Transcripts")) + 
     labs(x = "", y = "Pergentage of transcriptionally altered genes", fill = "") + 
     theme_bw() + 
+    geom_hline(yintercept = 0.5, lty = 2, lwd = 0.2) +
     theme(
       strip.background = element_rect(fill = "white"),
       axis.text.x = element_text(size = 15, colour = "black"),
@@ -489,7 +487,7 @@ load("results/important_variables/ann.rda")
 ann %>% 
   rownames_to_column("run") %>% 
   dplyr::select(run, phenotype, gender, region) %>% 
-  count(phenotype, gender, region, name = "number_of_samples") %>% 
+  dplyr::count(phenotype, gender, region, name = "number_of_samples") %>% 
   arrange(gender, region) %>% 
   openxlsx::write.xlsx(file = "results/tables/number_of_samples.xlsx", rowNames = F)
 ```
@@ -504,21 +502,21 @@ diff_df %>%
 ## Supplementary Table 3
 
 ```{r}
-genes_by_group_female %>% 
-  openxlsx::write.xlsx(file = "results/tables/intersection_tables.xlsx", row.names = F, sheetName = "Female_Intersections")
+wb <- createWorkbook()
 
-genes_by_group_male %>% 
-  openxlsx::write.xlsx(file = "results/tables/intersection_tables.xlsx", row.names = F, sheetName = "Male_Intersections",
-             append = T)
+addWorksheet(wb, sheetName = "Female_Intersections")
+writeData(wb, sheet = "Female_Intersections", genes_by_group_female)
 
-genes_by_sex %>% 
-  openxlsx::write.xlsx(file = "results/tables/intersection_tables.xlsx", row.names = F, sheetName = "Sex_Intersections",
-             append = T)
+addWorksheet(wb, sheetName = "Male_Intersections")
+writeData(wb, sheet = "Male_Intersections", genes_by_group_male)
 
-genes_by_regions %>% 
-  openxlsx::write.xlsx(file = "results/tables/intersection_tables.xlsx", row.names = F, sheetName = "Regions_Intersections",
-             append = T)
+addWorksheet(wb, sheetName = "Sex_Intersections")
+writeData(wb, sheet = "Sex_Intersections", genes_by_sex)
 
+addWorksheet(wb, sheetName = "Regions_Intersections")
+writeData(wb, sheet = "Regions_Intersections", genes_by_regions)
+
+saveWorkbook(wb, "results/tables/intersection_tables.xlsx", overwrite = TRUE)
 ```
 
 

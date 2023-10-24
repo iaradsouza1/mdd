@@ -63,19 +63,19 @@ dtu_w_biotype <- dtu_w_biotype %>%
 
 dge_plot <- dge_w_biotype %>% 
   group_by(biotype) %>% 
-  summarise(biotype_n = n() / length(unique(dge_w_biotype$gene_id)) * 100) %>% 
+  dplyr::summarise(biotype_n = dplyr::n() / length(unique(dge_w_biotype$gene_id)) * 100) %>% 
   ungroup() %>% 
-  mutate(type = "DGE")
+  dplyr::mutate(type = "DGE")
 
 dte_plot <- dte_w_biotype %>%
   group_by(biotype) %>%
-  summarise(biotype_n = n() / length(unique(dte_w_biotype$transcript_id))* 100) %>%
+  summarise(biotype_n = dplyr::n() / length(unique(dte_w_biotype$transcript_id))* 100) %>%
   ungroup() %>% 
   mutate(type = "DTE")
 
 dtu_plot <- dtu_w_biotype %>%
   group_by(biotype) %>%
-  summarise(biotype_n = n() / length(unique(dtu_w_biotype$isoform_id))* 100) %>%
+  summarise(biotype_n = dplyr::n() / length(unique(dtu_w_biotype$isoform_id))* 100) %>%
   ungroup() %>% 
   mutate(type = "DTU")
 
@@ -105,7 +105,7 @@ ggsave(biotype_plot, file = "results/plots_paper/biotype_plot.pdf", width = 7, h
 dge_plot <- dge_w_biotype %>% 
   separate(group, into = c("region", "sex")) %>% 
   group_by(biotype, sex) %>% 
-  summarise(biotype_n = n()) %>% 
+  summarise(biotype_n = dplyr::n()) %>% 
   ungroup() %>% 
   group_by(sex) %>% 
   mutate(prop = biotype_n / sum(biotype_n) * 100,
@@ -114,7 +114,7 @@ dge_plot <- dge_w_biotype %>%
 dte_plot <- dte_w_biotype %>% 
   separate(group, into = c("region", "sex")) %>% 
   group_by(biotype, sex) %>% 
-  summarise(biotype_n = n()) %>% 
+  summarise(biotype_n = dplyr::n()) %>% 
   ungroup() %>% 
   group_by(sex) %>% 
   mutate(prop = biotype_n / sum(biotype_n) * 100,
@@ -123,7 +123,7 @@ dte_plot <- dte_w_biotype %>%
 dtu_plot <- dtu_w_biotype %>% 
   separate(group, into = c("region", "sex")) %>% 
   group_by(biotype, sex) %>% 
-  summarise(biotype_n = n()) %>% 
+  summarise(biotype_n = dplyr::n()) %>% 
   ungroup() %>% 
   group_by(sex) %>% 
   mutate(prop = biotype_n / sum(biotype_n) * 100,
@@ -149,7 +149,7 @@ ggplot(df_plot, aes(x = reorder(biotype, dplyr::desc(prop)), y = prop, fill = ty
         strip.background = element_rect(fill = "white")) -> biotype_plot_by_sex
 
 # Save
-ggsave(biotype_plot_by_sex, filename = "results/plots_paper/biotype_by_sexplot.pdf", width = 7, height = 4)
+ggsave(biotype_plot_by_sex, filename = "results/plots_paper/fig3.pdf", width = 7, height = 4)
 
 # Test feature prevalence differences between female and male -------------
 
@@ -165,7 +165,7 @@ biotypes_by_sex %>%
   group_map(~ {
     cat(.y$type, sep = "\n")
     cont_table <- table(.x$biotype, .x$sex)
-    return(list(fisher = fisher.test(cont_table), count_table = cont_table))
+    return(list(fisher = fisher.test(cont_table, simulate.p.value = T), count_table = cont_table))
   }) -> biot_tests_fisher
 
 biotypes_by_sex %>% 
@@ -214,10 +214,10 @@ biotypes_by_sex %>%
   arrange(type, biotype) %>% 
   filter(sex == "female") %>%  
   group_by(region, type) %>% 
-  mutate(n1 = n()) %>% 
+  mutate(n1 = dplyr::n()) %>% 
   ungroup() %>% 
   group_by(biotype, type, region) %>% 
-  mutate(n2 = n(),
+  mutate(n2 = dplyr::n(),
          prop_by_region = (n2 / n1) * 100) %>% 
   arrange(desc(type), desc(region)) %>% 
   ungroup() %>% 
@@ -245,10 +245,10 @@ biotypes_by_sex %>%
   arrange(type, biotype) %>% 
   filter(sex == "male") %>%  
   group_by(region, type) %>% 
-  mutate(n1 = n()) %>% 
+  mutate(n1 = dplyr::n()) %>% 
   ungroup() %>% 
   group_by(biotype, type,region) %>% 
-  mutate(n2 = n(),
+  mutate(n2 = dplyr::n(),
          prop_by_region = (n2 / n1) * 100) %>% 
   arrange(desc(type), desc(region)) %>% 
   ungroup() %>% 
