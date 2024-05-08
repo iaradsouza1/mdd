@@ -82,9 +82,6 @@ addGraph(rdp, g)
 nodes <- read_tsv("results/networks/model_nodes.txt")
 edges <- read_delim("results/networks/model_edges.txt")
 
-nodes <- read_tsv("~/model_nodes.txt")
-edges <- read_delim("~/model_edges.txt")
-
 # Import nodes coordinates determined by vivagraph
 layout <- read.csv("results/networks/layout.csv")
 
@@ -109,16 +106,16 @@ ggraph(g, x = x, y = y) +
     data = as_data_frame(g, "vertices") %>% filter(gwas == "gwas"),
     colour = NA,
     n = 5,
-    pie_scale = 0.5,
+    pie_scale = 0.9,
   show.legend = F) +
   geom_scatterpie(
     cols = c("a", "b", "c"),
     data = as_data_frame(g, "vertices") %>% filter(gwas == "not_gwas"),
     colour = NA,
-    pie_scale = 0.2,
+    pie_scale = 0.3,
     show.legend = F
   ) +
-  geom_node_text(aes(label = alias), size = 0.9, nudge_x = 2, nudge_y = 4) + 
+  #geom_node_text(aes(label = alias), size = 1.7, nudge_x = 2, nudge_y = 4) + 
   #geom_node_label(aes(label = alias)) + 
   scale_fill_manual(values = c("#0ac80aff", "#4f4affff", "#ff822fff")) +
   coord_fixed() +
@@ -130,7 +127,7 @@ if(!dir.exists("results/plots_paper/")) {
   dir.create("results/plots_paper")
 }
 
-svg(filename = "results/plots_paper/network.svg", height = 10, width = 10)
+pdf(file = "~/Área de Trabalho/network.pdf", height = 15, width = 15)
 print(p)
 dev.off()
 

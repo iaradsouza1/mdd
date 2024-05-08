@@ -355,9 +355,45 @@ ggsave("results/plots_paper/fig2C_2.png", height = 4, width = 5, dpi = 300)
 
 ```
 
-## Figure 3
+# Figure 3
 
-Figure 3 was produced on the biotype analysis, in the `summarise_biotypes.R` script.
+```{r}
+# Load enrichment data
+load("results/tx_enrich/go_terms_tx_by_group.rda")
+
+# Create a dataframe with results from OFC (female) and CG25 (male) enrichment
+df_enrich <- bind_rows(enriched_df_diff[["OFC_female"]], enriched_df_diff[["Cg25_male"]])
+
+# Parse gene ratio column
+df_enrich <- df_enrich %>%  mutate(
+  n_tag = as.numeric(sapply(strsplit(GeneRatio, split = "\\/"), "[[", 2)),
+  GeneRatio = as.numeric(Count) / n_tag
+)
+
+# Plot
+df_enrich %>% 
+  ggplot(aes(x = fct_reorder2(Description, -p.adjust, -Count), y = GeneRatio, size = Count, col = p.adjust)) +
+  geom_point() +
+  facet_grid(rows = vars(group), scales = "free_y", space = "free_y",
+             labeller = as_labeller(c(
+               "Cg25_male" = "Cg25 (male)",
+               "OFC_female" = "OFC (female)"
+             ))) +
+  force_panelsizes(rows = c(0.17, 1)) +
+  scale_color_continuous(limits = c(0, 0.05), breaks = seq(0, 0.05, 0.01)) +
+  labs(x = "", y = "Gene ratio", color = "FDR", size = "Intersection") +
+  coord_flip() + 
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 9),
+        strip.text.y = element_text(size = 9))
+
+ggsave(filename = "results/plots_paper/fig3.pdf", width = 9, height = 6)
+ggsave(filename = "results/plots_paper/fig3.png", width = 9, height = 6)
+```
+
+## Figure 4
+
+Figure 4 was produced on the biotype analysis, in the `summarise_biotypes.R` script.
 
 
 # Supplementary Figures
