@@ -10,7 +10,7 @@ library(ggraph)
 library(magrittr)
 library(RedeR)
 
-# ------------------ GET GENES AND INTERACTIONS -------------------------
+# ------------------ GET GENES AND INTERACTIONS ---------------------------
 # Load diff genes table
 load("results/diff_exp/diff_df.rda")
 gwas_intersections <- read_csv("results/tables/gwas_intersection.csv")
@@ -64,6 +64,8 @@ s_map %>%
   combinescores(evidences = c("escore", "ascore", "dscore"), confLevel = 0.4) %>% 
   unique() -> int
 
+save(int, file = "results/networks/int.rda")
+
 # RedeR
 
 # Here we select proper coordinates to our network
@@ -75,13 +77,13 @@ addGraph(rdp, g)
 # Using REDER, we selected the best visualization for our network.
 # Nodes and edges coordinates are saved as nodes2 and edges2 in 'results/networks' directory.
 
-# Plot network layoout ----------------------------------------------------
+# Plot network layout ----------------------------------------------------
 
-# nodes <- read_tsv("results/networks/nodes2")
-# edges <- read_delim("results/networks/edges2", delim = "\t")
+nodes <- read_tsv("results/networks/model_nodes.txt")
+edges <- read_delim("results/networks/model_edges.txt")
 
-nodes <- read_tsv("~/Área de trabalho/redes/v3/nodes4")
-edges <- read_delim("~/Área de trabalho/redes/v3/edges4", delim = "\t")
+# Import nodes coordinates determined by vivagraph
+layout <- read.csv("results/networks/layout.csv")
 
 # Mark nodes as GWAS
 nodes %<>% 
@@ -90,8 +92,8 @@ nodes %<>%
 # Plot
 g <- graph_from_data_frame(edges, nodes, directed = F)
 
-V(g)$x <- nodes$x
-V(g)$y <- nodes$y
+V(g)$x <- layout[,1]
+V(g)$y <- layout[,2]
 V(g)$size <- 1
 V(g)$a <- ifelse(V(g)$alias %in% unique(diff_df$hgnc_symbol[diff_df$type == "DGE"]), 1, 0)
 V(g)$b <- ifelse(V(g)$alias %in% unique(diff_df$hgnc_symbol[diff_df$type == "DTE"]), 1, 0)
@@ -104,27 +106,32 @@ ggraph(g, x = x, y = y) +
     data = as_data_frame(g, "vertices") %>% filter(gwas == "gwas"),
     colour = NA,
     n = 5,
-    pie_scale = 1.3,
+    pie_scale = 0.9,
   show.legend = F) +
   geom_scatterpie(
     cols = c("a", "b", "c"),
     data = as_data_frame(g, "vertices") %>% filter(gwas == "not_gwas"),
     colour = NA,
-    pie_scale = 0.2,
+    pie_scale = 0.3,
     show.legend = F
   ) +
-  geom_node_text(aes(label = alias), size = 1.1, nudge_x = 10, nudge_y = 10) + 
+  #geom_node_text(aes(label = alias), size = 1.7, nudge_x = 2, nudge_y = 4) + 
   #geom_node_label(aes(label = alias)) + 
   scale_fill_manual(values = c("#0ac80aff", "#4f4affff", "#ff822fff")) +
   coord_fixed() +
   theme_graph() -> p
 
 # Save 
-svg(filename = "results/plots_paper/rede2.svg", height = 10, width = 10)
+
+if(!dir.exists("results/plots_paper/")) {
+  dir.create("results/plots_paper")
+}
+
+pdf(file = "~/Área de Trabalho/network.pdf", height = 15, width = 15)
 print(p)
 dev.off()
 
-# Percentage of total genes in the network: 43,72%%
+# Percentage of total genes in the network: 51,24%
 n_distinct(nodes$alias) / n_distinct(diff_df$hgnc_symbol)
 
 
@@ -219,7 +226,7 @@ set_graph_params <- function(g, dict, f_ls) {
 
 l_groups <- map(split(diff_df$hgnc_symbol, diff_df$group), unique)
 
-graphs_by_group <- imap(l_groups, function(x, i){
+graphs_by_group <- imap(l_groups, function(x, i) {
   
   # CHANGE HERE IF YOU WANT FIRST NEIGHBORS
   # (also remember to change the path)
@@ -234,14 +241,14 @@ graphs_by_group <- imap(l_groups, function(x, i){
   # To set all gene labels, set diff_df instead of diff_temp
   g <- set_graph_params(g, dc, f_ls)
   
-  if(include_first_neighbors){
+  if(include_first_neighbors) {
     colors_list <- V(g)$pie
     degrees <- degree(g,v=V(g))
     filter <- !(paste(colors_list) == "c(1, 0, 0, 0)" & degrees == 1)
     g <- induced_subgraph(g, filter)
   }
   
-  if(length(V(g)$pie.color) != 0){
+  if(length(V(g)$pie.color) != 0) {
     pdf(paste0("results/networks/", i, ".pdf"), width = 10, height = 10)
     plot(g)
     dev.off()
